@@ -11,4 +11,4 @@ format:
 
 docs:
 	gomake clean
-	godoc ${TARG} > README.txt
+	godoc ${TARG} > Documentation.txt
