@@ -13,7 +13,7 @@ Example usage:
     parser := goraptor.NewParser("guess")
     defer parser.Free()
 
-    ch := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card", "")
+    ch := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card.rdf", "")
     for {
         statement, ok := <-ch
         if ! ok {
@@ -34,7 +34,7 @@ and write in another, preserving namespaces:
 
     parser.SetNamespaceHandler(func(pfx, uri string) { serializer.SetNamespace(pfx, uri) })
 
-    statements := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card", "")
+    statements := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card.rdf", "")
     str, err := serializer.Serialize(statements, "")
 
     fmt.Print(str)

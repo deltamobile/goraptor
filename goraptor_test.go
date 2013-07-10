@@ -148,7 +148,7 @@ func TestRaptorParseUri(t *testing.T) {
 	defer parser.Free()
 
 	count := 0
-	out := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card", "")
+	out := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card.rdf", "")
 	for {
 		s, ok := <-out
 		if !ok {
