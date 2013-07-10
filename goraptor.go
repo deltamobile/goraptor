@@ -788,6 +788,10 @@ func (p *Parser) ParseUri(uri string, base_uri string) chan *Statement {
 		curi := C.CString(uri)
 		ruri := C.raptor_new_uri(p.world, (*C.uchar)(unsafe.Pointer(curi)))
 		C.free(unsafe.Pointer(curi))
+		if ruri == nil {
+			log.Print("failed to create raptor URI for: ", uri)
+			return
+		}
 
 		var buri *C.raptor_uri
 		if len(base_uri) == 0 {
