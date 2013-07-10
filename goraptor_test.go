@@ -12,6 +12,7 @@ import (
 )
 
 func TestGlobal(t *testing.T) {
+	log.Println("TestGlobal")
 	log.Print("[log levels]")
 	for level, str := range LogLevels {
 		log.Printf("%d - %s", level, str)
@@ -118,6 +119,7 @@ func codec(s *Statement) (err error) {
 }
 
 func TestRaptorParseFile(t *testing.T) {
+	log.Println("TestRaptorParseFile")
 	parser := NewParser("rdfxml")
 	defer parser.Free()
 
@@ -141,6 +143,7 @@ func TestRaptorParseFile(t *testing.T) {
 }
 
 func TestRaptorParseUri(t *testing.T) {
+	log.Println("TestRaptorParseUri")
 	parser := NewParser("guess")
 	defer parser.Free()
 
@@ -163,6 +166,7 @@ func TestRaptorParseUri(t *testing.T) {
 }
 
 func TestRaptorParseBuf(t *testing.T) {
+	log.Println("TestRaptorParseBuf")
 	turtle := `
 @prefix ex: <http://example.org/>.
 
@@ -186,6 +190,7 @@ _:b1 ex:p2 ex:foo.
 }
 
 func TestRaptorSerializeFile(t *testing.T) {
+	log.Println("TestRaptorSerializeFile")
 	parser := NewParser("rdfxml")
 	defer parser.Free()
 
@@ -208,6 +213,7 @@ func TestRaptorSerializeFile(t *testing.T) {
 }
 
 func TestRaptorSerializeString(t *testing.T) {
+	log.Println("TestRaptorSerializeString")
 	parser := NewParser("rdfxml")
 	defer parser.Free()
 
@@ -228,6 +234,7 @@ func TestRaptorSerializeString(t *testing.T) {
 }
 
 func TestTiger(t *testing.T) {
+	log.Println("TestTiger")
 	parser := NewParser("ntriples")
 	ch := parser.ParseFile("TGR06001_sample.nt", "")
 	count := 0
