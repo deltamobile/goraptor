@@ -780,7 +780,10 @@ func (p *Parser) ParseFile(filename string, base_uri string) chan *Statement {
 func (p *Parser) ParseUri(uri string, base_uri string) chan *Statement {
 	p.out = make(chan *Statement)
 	go func() {
+		defer close(p.out)
+
 		p.mutex.Lock()
+		defer p.mutex.Unlock()
 
 		curi := C.CString(uri)
 		ruri := C.raptor_new_uri(p.world, (*C.uchar)(unsafe.Pointer(curi)))
@@ -800,9 +803,6 @@ func (p *Parser) ParseUri(uri string, base_uri string) chan *Statement {
 		C.raptor_free_uri(ruri)
 		C.raptor_free_uri(buri)
 
-		p.mutex.Unlock()
-
-		close(p.out)
 	}()
 	return p.out
 }
