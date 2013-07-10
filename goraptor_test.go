@@ -229,7 +229,7 @@ func TestRaptorSerializeString(t *testing.T) {
 
 func TestTiger(t *testing.T) {
 	parser := NewParser("ntriples")
-	ch := parser.ParseFile("TGR06001.nt", "")
+	ch := parser.ParseFile("TGR06001_sample.nt", "")
 	count := 0
 	start := time.Now()
 	for {
