@@ -14,14 +14,9 @@ Example usage:
     defer parser.Free()
 
     ch := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card.rdf", "")
-    for {
-        statement, ok := <-ch
-        if ! ok {
-            break
-        }
-
+    for statement := range ch {
         // do something with statement
-     }
+    }
 
 Serialisers are analogous. For example to read in one serialisation
 and write in another, preserving namespaces:
@@ -59,6 +54,21 @@ Object and Graph. Both of these datatypes are memory managed
 by Go but can be converted back and forth to/from raptor's
 internal representation. The datatypes support a compact
 binary encoding for use with the gob package.
+
+
+Using the locator:
+
+    parser := goraptor.NewParser("guess")
+    defer parser.Free()
+
+    ch := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card.rdf", "")
+    locCh := parser.LocatorChan()
+    for statement := range ch {
+        locator := <- locCh
+        // do something with statement and locator
+        // e.g.: fmt.Printf("Found statement %s at line %d", statement, locator.Line)
+    }
+
 
 */
 package goraptor
