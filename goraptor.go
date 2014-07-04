@@ -1025,16 +1025,15 @@ func (s *Serializer) Add(statement *Statement) (err error) {
 	return
 }
 
-func (s *Serializer) AddN(ch chan *Statement) {
+func (s *Serializer) AddN(ch chan *Statement) (err error) {
 	s.mutex.Lock()
-	for {
-		statement, ok := <-ch
-		if !ok {
-			break
+	defer s.mutex.Unlock()
+	for statement := range ch {
+		if err := s.add(statement); err != nil {
+			return err
 		}
-		s.add(statement)
 	}
-	s.mutex.Unlock()
+	return nil
 }
 
 func (s *Serializer) StartStream(file *os.File, base_uri string) (err error) {
