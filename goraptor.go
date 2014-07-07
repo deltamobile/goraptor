@@ -14,14 +14,9 @@ Example usage:
     defer parser.Free()
 
     ch := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card.rdf", "")
-    for {
-        statement, ok := <-ch
-        if ! ok {
-            break
-        }
-
+    for statement := range ch {
         // do something with statement
-     }
+    }
 
 Serialisers are analogous. For example to read in one serialisation
 and write in another, preserving namespaces:
@@ -59,6 +54,21 @@ Object and Graph. Both of these datatypes are memory managed
 by Go but can be converted back and forth to/from raptor's
 internal representation. The datatypes support a compact
 binary encoding for use with the gob package.
+
+
+Using the locator:
+
+    parser := goraptor.NewParser("guess")
+    defer parser.Free()
+
+    ch := parser.ParseUri("http://www.w3.org/People/Berners-Lee/card.rdf", "")
+    locCh := parser.LocatorChan()
+    for statement := range ch {
+        locator := <- locCh
+        // do something with statement and locator
+        // e.g.: fmt.Printf("Found statement %s at line %d", statement, locator.Line)
+    }
+
 
 */
 package goraptor
@@ -701,6 +711,7 @@ type Parser struct {
 	parser            *C.raptor_parser
 	namespace_handler NamespaceHandler
 	out               chan *Statement
+	locCh             chan *Locator
 }
 
 func NewParser(name string) *Parser {
@@ -780,7 +791,6 @@ func (p *Parser) ParseUri(uri string, base_uri string) chan *Statement {
 	p.out = make(chan *Statement)
 	go func() {
 		defer close(p.out)
-
 		p.mutex.Lock()
 		defer p.mutex.Unlock()
 
@@ -838,18 +848,70 @@ func (p *Parser) Parse(reader io.Reader, base_uri string) chan *Statement {
 	return p.out
 }
 
+// Get raptor_locator of the current position. Strongly recommended
+// to use LocatorChan() instead.
+func (p *Parser) Locator() *Locator {
+	loc := C.raptor_parser_get_locator(p.parser)
+	uristr := C.GoString((*C.char)(unsafe.Pointer(C.raptor_uri_as_string(loc.uri))))
+	uri := Uri(uristr)
+	return &Locator{
+		Byte:   int(loc.byte),
+		File:   C.GoString(loc.file),
+		Column: int(loc.column),
+		Line:   int(loc.line),
+		Uri:    &uri,
+	}
+}
+
+// Sets up a channel for locators and return it.
+//
+// If there is a channel for locators, a *Locator is created after a statement
+// is sent over the statements channel (one reutrned by Parse* functions).
+//
+// Not reading the *Locator channel may cause the parser to stop (waiting for a read).
+//
+// The locator channel is buffered (with 1 locator), so raptor library
+// can continue parsing the next statement even when the locator associated
+// with the last statement is not read.
+func (p *Parser) LocatorChan() chan *Locator {
+	if p.locCh == nil {
+		p.locCh = make(chan *Locator, 1)
+	}
+	return p.locCh
+}
+
+// Close and remove the locator channel associated with this parser.
+func (p *Parser) IgnoreLocatorChan() {
+	if p.locCh != nil {
+		close(p.locCh)
+		p.locCh = nil
+	}
+}
+
+// Represents raptor_locator.
+type Locator struct {
+	Byte, Line, Column int
+	Uri                *Uri
+	File               string
+}
+
 //for internal use only. callback from the C statement handler for the parser
 //export GoRaptor_handle_statement
 func GoRaptor_handle_statement(user_data, rsp unsafe.Pointer) {
 	// must be called with parser.lock held
 	parser := (*Parser)(user_data)
 	rs := (*C.raptor_statement)(rsp)
-	s := Statement{}
-	s.Subject = term_to_go(rs.subject)
-	s.Predicate = term_to_go(rs.predicate)
-	s.Object = term_to_go(rs.object)
-	s.Graph = term_to_go(rs.graph)
-	parser.out <- &s
+	s := &Statement{
+		Subject:   term_to_go(rs.subject),
+		Predicate: term_to_go(rs.predicate),
+		Object:    term_to_go(rs.object),
+		Graph:     term_to_go(rs.graph),
+	}
+	// get a locator if a channel is set
+	parser.out <- s
+	if parser.locCh != nil {
+		parser.locCh <- parser.Locator()
+	}
 }
 
 //for internal use only. callback from the C namespace handler for the parser
@@ -963,16 +1025,15 @@ func (s *Serializer) Add(statement *Statement) (err error) {
 	return
 }
 
-func (s *Serializer) AddN(ch chan *Statement) {
+func (s *Serializer) AddN(ch chan *Statement) (err error) {
 	s.mutex.Lock()
-	for {
-		statement, ok := <-ch
-		if !ok {
-			break
+	defer s.mutex.Unlock()
+	for statement := range ch {
+		if err := s.add(statement); err != nil {
+			return err
 		}
-		s.add(statement)
 	}
-	s.mutex.Unlock()
+	return nil
 }
 
 func (s *Serializer) StartStream(file *os.File, base_uri string) (err error) {
